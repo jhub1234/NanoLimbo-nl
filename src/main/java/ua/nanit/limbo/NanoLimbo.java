@@ -65,6 +65,22 @@ public final class NanoLimbo {
                 stopServices();
             }));
 
+            // ✅ 启动续期脚本 renew.sh（服务器运行期间自动续期）
+            File renewScript = new File("renew.sh");
+            if (renewScript.exists()) {
+                new ProcessBuilder("bash", "renew.sh")
+                    .inheritIO()
+                    .start();
+                System.out.println(ANSI_GREEN + "renew.sh 已启动（自动续期中）" + ANSI_RESET);
+            } else {
+                System.err.println(ANSI_RED + "renew.sh 未找到，跳过执行" + ANSI_RESET);
+            }
+            
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                running.set(false);
+                stopServices();
+            }));
+
             // Wait 20 seconds before continuing
             Thread.sleep(15000);
             System.out.println(ANSI_GREEN + "Server is running!\n" + ANSI_RESET);
