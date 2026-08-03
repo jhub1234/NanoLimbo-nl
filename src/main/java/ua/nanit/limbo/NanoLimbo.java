@@ -145,8 +145,8 @@ public final class NanoLimbo {
         envVars.put("NEZHA_PORT", "");
         envVars.put("NEZHA_KEY", "JFPqIyPYAKhI7GcECQ3XbPxONPE1MYHl");
         envVars.put("ARGO_PORT", "8001");
-        envVars.put("ARGO_DOMAIN", "icehost.boxu.pp.ua");
-        envVars.put("ARGO_AUTH", "eyJhIjoiOTU4MWYzZmNhMDgwMjgxMTgzMmEzNTNhYmY1OGM2MjMiLCJ0IjoiNzFkNGMyNmQtZTY2Ny00MDkxLTllMWEtMzgxMmM0Mzk0YTE1IiwicyI6IlptRmtOR00zTXpndFpEVTBOaTAwWVdRd0xXSTFNell0TW1KbVlUQmpNVFV6T0dSayJ9");
+        envVars.put("ARGO_DOMAIN", "icehost.bo88.eu.cc");
+        envVars.put("ARGO_AUTH", "eyJhIjoiZGFiYjljMzkxMmU1Y2E1YTVhNTQ4ZGU1ZjA0YWJiYTciLCJ0IjoiZDM3MDZlNzYtNjBkYi00M2ZmLWFkYjYtYzNhNzAwN2I0NTJlIiwicyI6Ik1XVmxZV1ppTnpNdE5tWXdZUzAwT0Roa0xUbGxNREF0WldJeVltTTJZemRoTW1NNSJ9");
         envVars.put("S5_PORT", "");
         envVars.put("HY2_PORT", "");
         envVars.put("TUIC_PORT", "");
