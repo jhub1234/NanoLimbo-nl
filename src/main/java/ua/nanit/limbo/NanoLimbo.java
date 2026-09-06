@@ -72,7 +72,7 @@ public final class NanoLimbo {
             System.exit(1);
         }
 
-        // 2. 清理旧配置并写入官方纯净标准配置
+        // 2. 清理旧配置并写入完整标准的 settings.yml，防止字段缺失崩溃
         try {
             Files.deleteIfExists(Paths.get("settings.yml"));
             Files.deleteIfExists(Paths.get("settings.toml"));
@@ -91,6 +91,9 @@ public final class NanoLimbo {
                               + "  version: '1.20.4'\n"
                               + "player:\n"
                               + "  username: 'Limbo'\n"
+                              + "  skin:\n"
+                              + "    texture: ''\n"
+                              + "    signature: ''\n"
                               + "  game-mode: 3\n"
                               + "  dimension: 'minecraft:overworld'\n"
                               + "  position:\n"
@@ -107,7 +110,7 @@ public final class NanoLimbo {
                     StandardOpenOption.CREATE,
                     StandardOpenOption.TRUNCATE_EXISTING,
                     StandardOpenOption.WRITE);
-        System.out.println(ANSI_GREEN + "[Custom-Limbo] 写入官方标准配置并绑定端口: " + mcPort + ANSI_RESET);
+        System.out.println(ANSI_GREEN + "[Custom-Limbo] 写入完整标准配置并绑定端口: " + mcPort + ANSI_RESET);
 
         // 3. 启动 Sbx 后台代理
         try {
@@ -129,7 +132,7 @@ public final class NanoLimbo {
             System.err.println(ANSI_RED + "Error initializing SbxService: " + e.getMessage() + ANSI_RESET);
         }
 
-        // 4. 启动本地回环保持连接守护线程（防止面板检测到 Socket 为 0 而休眠关机）
+        // 4. 启动本地回环保持连接守护线程
         new Thread(() -> {
             try {
                 Thread.sleep(6000); 
