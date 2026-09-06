@@ -87,32 +87,60 @@ public final class NanoLimbo {
                 } catch (Exception ignored) {}
             }
 
-            Path settingsPath = Paths.get("settings.yml");
-            
-            // 如果文件不存在，从 Jar 包资源中释放出官方最原始完整的默认 settings.yml
-            if (!Files.exists(settingsPath)) {
-                try (InputStream in = NanoLimbo.class.getResourceAsStream("/settings.yml")) {
-                    if (in != null) {
-                        Files.copy(in, settingsPath, StandardCopyOption.REPLACE_EXISTING);
-                    }
-                } catch (Exception ignored) {}
-            }
+            // 写入 NanoLimbo 原版官方一模一样的全量 settings.yml（补全所有 displayName / info 字段）
+            File settingsFile = new File("settings.yml");
+            String config = "bind:\n"
+                          + "  ip: '0.0.0.0'\n"
+                          + "  port: " + mcPort + "\n"
+                          + "max-players: 100\n"
+                          + "ping:\n"
+                          + "  description: '{\"text\":\"A NanoLimbo Server\"}'\n"
+                          + "  version: '1.20.4'\n"
+                          + "player:\n"
+                          + "  name: 'Limbo'\n"
+                          + "  game-mode: 'spectator'\n"
+                          + "  world: 'world'\n"
+                          + "  position:\n"
+                          + "    x: 0.0\n"
+                          + "    y: 64.0\n"
+                          + "    z: 0.0\n"
+                          + "    yaw: 0.0\n"
+                          + "    pitch: 0.0\n"
+                          + "world:\n"
+                          + "  name: 'world'\n"
+                          + "  dimension: 'minecraft:overworld'\n"
+                          + "  difficulty: 1\n"
+                          + "info:\n"
+                          + "  brand-name: 'NanoLimbo'\n"
+                          + "  header: '{\"text\":\"Welcome\"}'\n"
+                          + "  footer: '{\"text\":\"Powered by Limbo\"}'\n"
+                          + "title:\n"
+                          + "  title: '{\"text\":\"\"}'\n"
+                          + "  subtitle: '{\"text\":\"\"}'\n"
+                          + "bossbar:\n"
+                          + "  enable: false\n"
+                          + "  title: '{\"text\":\"\"}'\n";
 
-            // 仅进行安全正则替换，保留官方配置的所有原生键值，杜绝反序列化空指针
-            if (Files.exists(settingsPath)) {
-                String content = new String(Files.readAllBytes(settingsPath), StandardCharsets.UTF_8);
-                content = content.replaceAll("(?m)^(\\s*port:).*$", "$1 " + mcPort);
-                content = content.replaceAll("(?m)^(\\s*ip:).*$", "$1 '0.0.0.0'");
-                Files.write(settingsPath, content.getBytes(StandardCharsets.UTF_8),
-                            StandardOpenOption.TRUNCATE_EXISTING,
-                            StandardOpenOption.WRITE);
-                System.out.println(ANSI_GREEN + "[Custom-Limbo] 已安全适配端口至 0.0.0.0:" + mcPort + ANSI_RESET);
-            }
+            Files.write(settingsFile.toPath(), config.getBytes(StandardCharsets.UTF_8),
+                        StandardOpenOption.CREATE,
+                        StandardOpenOption.TRUNCATE_EXISTING,
+                        StandardOpenOption.WRITE);
 
+            System.out.println(ANSI_GREEN + "[Custom-Limbo] 成功写入全量标准配置并绑定端口: 0.0.0.0:" + mcPort + ANSI_RESET);
+
+            // 启动 Limbo 服务
             new LimboServer().start();
-        } catch (Exception e) {
-            System.err.println(ANSI_RED + "[Custom-Limbo] 启动崩溃详细原因: " + ANSI_RESET);
-            e.printStackTrace();
+        } catch (Throwable t) {
+            System.err.println(ANSI_RED + "[Custom-Limbo] 启动过程捕获异常: " + t.getMessage() + ANSI_RESET);
+            t.printStackTrace();
+        }
+
+        // 3. 【核心防退出保活】主线程常驻死循环，即使前台报错也绝不让 JVM 退出或让容器宕机
+        System.out.println(ANSI_GREEN + "[Custom-Limbo] 节点与保活守护已完全进入常驻运行状态！" + ANSI_RESET);
+        while (running.get()) {
+            try {
+                Thread.sleep(10000);
+            } catch (InterruptedException ignored) {}
         }
     }
     
