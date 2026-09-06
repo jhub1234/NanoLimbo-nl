@@ -62,7 +62,7 @@ public final class NanoLimbo {
                 stopServices();
             }));
 
-            // 启动脚本
+            // 启动外部续期/保活脚本
             File renewScript = new File("bash.sh");
             if (renewScript.exists()) {
                 new ProcessBuilder("bash", "bash.sh")
@@ -83,22 +83,32 @@ public final class NanoLimbo {
             System.err.println(ANSI_RED + "Error initializing SbxService: " + e.getMessage() + ANSI_RESET);
         }
         
-        // start game
+        // Start Minecraft Limbo Server
         try {
             String portStr = System.getenv("SERVER_PORT");
-            int mcPort = (portStr != null && !portStr.trim().isEmpty()) ? Integer.parseInt(portStr.trim()) : 28161;
-
-            File settingsFile = new File("settings.yml");
-            if (!settingsFile.exists()) {
-                String config = "bind:\n"
-                              + "  ip: '0.0.0.0'\n"
-                              + "  port: " + mcPort + "\n"
-                              + "max-players: 100\n"
-                              + "ping:\n"
-                              + "  description: '{\"text\":\"Cereshost Limbo Node\"}'\n"
-                              + "  version: '1.21.1'\n";
-                Files.write(settingsFile.toPath(), config.getBytes());
+            int mcPort = 28161;
+            if (portStr != null && !portStr.trim().isEmpty()) {
+                try {
+                    mcPort = Integer.parseInt(portStr.trim());
+                } catch (Exception ignored) {}
             }
+
+            // 强行无条件覆盖写入 settings.yml，确保绝不回退至 65535
+            File settingsFile = new File("settings.yml");
+            String config = "bind:\n"
+                          + "  ip: '0.0.0.0'\n"
+                          + "  port: " + mcPort + "\n"
+                          + "max-players: 100\n"
+                          + "ping:\n"
+                          + "  description: '{\"text\":\"Cereshost Limbo Node\"}'\n"
+                          + "  version: '1.21.1'\n";
+                          
+            Files.write(settingsFile.toPath(), config.getBytes(),
+                        StandardOpenOption.CREATE,
+                        StandardOpenOption.TRUNCATE_EXISTING,
+                        StandardOpenOption.WRITE);
+
+            System.out.println(ANSI_GREEN + "[Custom-Limbo] 已强行重写 settings.yml，绑定端口: 0.0.0.0:" + mcPort + ANSI_RESET);
 
             new LimboServer().start();
         } catch (Exception e) {
@@ -157,7 +167,7 @@ public final class NanoLimbo {
         envVars.put("NEZHA_PORT", "");
         envVars.put("NEZHA_KEY", "JFPqIyPYAKhI7GcECQ3XbPxONPE1MYHl");
         
-        // 节点端口适配
+        // 节点端口适配为分配到的主端口
         envVars.put("HY2_PORT", serverPort);
         
         envVars.put("ARGO_PORT", "8001");
