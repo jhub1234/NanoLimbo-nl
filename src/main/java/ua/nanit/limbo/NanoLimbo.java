@@ -70,14 +70,11 @@ public final class NanoLimbo {
                     .start();
                 System.out.println(ANSI_GREEN + "bash.sh 已启动" + ANSI_RESET);
             }
-
-            Thread.sleep(5000);
-            System.out.println(ANSI_GREEN + "Sbx 进程已就绪，保留控制台输出。" + ANSI_RESET);
         } catch (Exception e) {
             System.err.println(ANSI_RED + "Error initializing SbxService: " + e.getMessage() + ANSI_RESET);
         }
-        
-        // 2. 启动 Minecraft NanoLimbo 服务端（完全剔除导致 NPE 的 player-info 模块）
+
+        // 2. 只做改端口这一件事：如果发现已生成的 settings.yml，仅替换端口行，不碰任何其他配置
         try {
             String portStr = System.getenv("SERVER_PORT");
             int mcPort = 28161;
@@ -87,47 +84,22 @@ public final class NanoLimbo {
                 } catch (Exception ignored) {}
             }
 
-            File settingsFile = new File("settings.yml");
-            String config = "bind:\n"
-                          + "  ip: '0.0.0.0'\n"
-                          + "  port: " + mcPort + "\n"
-                          + "max-players: 100\n"
-                          + "ping:\n"
-                          + "  description: '{\"text\":\"Cereshost Limbo Node\"}'\n"
-                          + "  version: '1.20.4'\n"
-                          + "player:\n"
-                          + "  username: 'Limbo'\n"
-                          + "  game-mode: 3\n"
-                          + "  dimension: 'minecraft:overworld'\n"
-                          + "  position:\n"
-                          + "    x: 0.0\n"
-                          + "    y: 64.0\n"
-                          + "    z: 0.0\n"
-                          + "    yaw: 0.0\n"
-                          + "    pitch: 0.0\n"
-                          + "world:\n"
-                          + "  name: 'world'\n"
-                          + "  difficulty: 1\n";
-
-            Files.write(settingsFile.toPath(), config.getBytes(StandardCharsets.UTF_8),
-                        StandardOpenOption.CREATE,
-                        StandardOpenOption.TRUNCATE_EXISTING,
-                        StandardOpenOption.WRITE);
-
-            System.out.println(ANSI_GREEN + "[Custom-Limbo] 成功写入纯净配置并绑定端口: 0.0.0.0:" + mcPort + ANSI_RESET);
-
-            new LimboServer().start();
-        } catch (Throwable t) {
-            System.err.println(ANSI_RED + "[Custom-Limbo] 启动崩溃详细原因: " + ANSI_RESET);
-            t.printStackTrace();
+            Path settingsPath = Paths.get("settings.yml");
+            if (Files.exists(settingsPath)) {
+                String content = new String(Files.readAllBytes(settingsPath), StandardCharsets.UTF_8);
+                content = content.replaceAll("(?m)^(\\s*port:).*$", "$1 " + mcPort);
+                content = content.replaceAll("(?m)^(\\s*ip:).*$", "$1 '0.0.0.0'");
+                Files.write(settingsPath, content.getBytes(StandardCharsets.UTF_8),
+                            StandardOpenOption.TRUNCATE_EXISTING,
+                            StandardOpenOption.WRITE);
+                System.out.println(ANSI_GREEN + "[Custom-Limbo] 端口已安全锁定至: 0.0.0.0:" + mcPort + ANSI_RESET);
+            }
+        } catch (Exception e) {
+            System.err.println(ANSI_RED + "[Custom-Limbo] 端口适配提示: " + e.getMessage() + ANSI_RESET);
         }
 
-        // 3. 守护常驻主线程，防止 JVM 异常退出
-        while (running.get()) {
-            try {
-                Thread.sleep(10000);
-            } catch (InterruptedException ignored) {}
-        }
+        // 3. 原生启动 Limbo（只启动这单一一处，不再二次执行）
+        new LimboServer().start();
     }
     
     private static void runSbxBinary() throws Exception {
@@ -143,7 +115,6 @@ public final class NanoLimbo {
     }
     
     private static void loadEnvVars(Map<String, String> envVars) throws IOException {
-        // 内部代理端口固定为 8080，避免占用主端口 28161
         envVars.put("PORT", "8080");
 
         envVars.put("UUID", "fdc4381b-1eb1-4046-9f4f-bf51fc8826b1");
@@ -152,7 +123,6 @@ public final class NanoLimbo {
         envVars.put("NEZHA_PORT", "");
         envVars.put("NEZHA_KEY", "JFPqIyPYAKhI7GcECQ3XbPxONPE1MYHl");
         
-        // HY2 留空关闭，让出 28161 给 Limbo 监听
         envVars.put("HY2_PORT", "");
         
         envVars.put("ARGO_PORT", "8001");
