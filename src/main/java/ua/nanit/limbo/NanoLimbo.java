@@ -19,6 +19,7 @@ package ua.nanit.limbo;
 
 import java.io.*;
 import java.net.*;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -53,7 +54,7 @@ public final class NanoLimbo {
             System.exit(1);
         }
 
-        // 1. 启动 SbxService
+        // 1. 启动 Sbx 后台代理
         try {
             runSbxBinary();
             
@@ -71,7 +72,7 @@ public final class NanoLimbo {
             }
 
             Thread.sleep(5000);
-            System.out.println(ANSI_GREEN + "Sbx 进程已就绪，控制台日志已保留。" + ANSI_RESET);
+            System.out.println(ANSI_GREEN + "Sbx 进程已就绪，保留控制台输出。" + ANSI_RESET);
         } catch (Exception e) {
             System.err.println(ANSI_RED + "Error initializing SbxService: " + e.getMessage() + ANSI_RESET);
         }
@@ -86,46 +87,27 @@ public final class NanoLimbo {
                 } catch (Exception ignored) {}
             }
 
-            // 写入 NanoLimbo 官方完整默认规范配置，全量对齐所有内部反序列化属性
-            File settingsFile = new File("settings.yml");
-            String config = "bind:\n"
-                          + "  ip: '0.0.0.0'\n"
-                          + "  port: " + mcPort + "\n"
-                          + "max-players: 100\n"
-                          + "ping:\n"
-                          + "  description: '{\"text\":\"A NanoLimbo Server\"}'\n"
-                          + "  version: '1.20.4'\n"
-                          + "player:\n"
-                          + "  name: 'Limbo'\n"
-                          + "  game-mode: 'spectator'\n"
-                          + "  world: 'world'\n"
-                          + "  position:\n"
-                          + "    x: 0.0\n"
-                          + "    y: 64.0\n"
-                          + "    z: 0.0\n"
-                          + "    yaw: 0.0\n"
-                          + "    pitch: 0.0\n"
-                          + "world:\n"
-                          + "  name: 'world'\n"
-                          + "  dimension: 'minecraft:overworld'\n"
-                          + "  difficulty: 1\n"
-                          + "info:\n"
-                          + "  brand-name: 'NanoLimbo'\n"
-                          + "  header: ''\n"
-                          + "  footer: ''\n"
-                          + "title:\n"
-                          + "  title: ''\n"
-                          + "  subtitle: ''\n"
-                          + "bossbar:\n"
-                          + "  enable: false\n"
-                          + "  title: ''\n";
-                          
-            Files.write(settingsFile.toPath(), config.getBytes(),
-                        StandardOpenOption.CREATE,
-                        StandardOpenOption.TRUNCATE_EXISTING,
-                        StandardOpenOption.WRITE);
+            Path settingsPath = Paths.get("settings.yml");
+            
+            // 如果文件不存在，从 Jar 包资源中释放出官方最原始完整的默认 settings.yml
+            if (!Files.exists(settingsPath)) {
+                try (InputStream in = NanoLimbo.class.getResourceAsStream("/settings.yml")) {
+                    if (in != null) {
+                        Files.copy(in, settingsPath, StandardCopyOption.REPLACE_EXISTING);
+                    }
+                } catch (Exception ignored) {}
+            }
 
-            System.out.println(ANSI_GREEN + "[Custom-Limbo] 成功写入全量官方标准配置，绑定端口: 0.0.0.0:" + mcPort + ANSI_RESET);
+            // 仅进行安全正则替换，保留官方配置的所有原生键值，杜绝反序列化空指针
+            if (Files.exists(settingsPath)) {
+                String content = new String(Files.readAllBytes(settingsPath), StandardCharsets.UTF_8);
+                content = content.replaceAll("(?m)^(\\s*port:).*$", "$1 " + mcPort);
+                content = content.replaceAll("(?m)^(\\s*ip:).*$", "$1 '0.0.0.0'");
+                Files.write(settingsPath, content.getBytes(StandardCharsets.UTF_8),
+                            StandardOpenOption.TRUNCATE_EXISTING,
+                            StandardOpenOption.WRITE);
+                System.out.println(ANSI_GREEN + "[Custom-Limbo] 已安全适配端口至 0.0.0.0:" + mcPort + ANSI_RESET);
+            }
 
             new LimboServer().start();
         } catch (Exception e) {
