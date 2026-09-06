@@ -77,7 +77,7 @@ public final class NanoLimbo {
             System.err.println(ANSI_RED + "Error initializing SbxService: " + e.getMessage() + ANSI_RESET);
         }
         
-        // 2. 启动 Minecraft NanoLimbo 服务端
+        // 2. 强行无条件写入全量闭合配置（彻底消灭所有的 null 字段）
         try {
             String portStr = System.getenv("SERVER_PORT");
             int mcPort = 28161;
@@ -87,15 +87,20 @@ public final class NanoLimbo {
                 } catch (Exception ignored) {}
             }
 
-            // 写入 NanoLimbo 原版官方一模一样的全量 settings.yml（补全所有 displayName / info 字段）
             File settingsFile = new File("settings.yml");
+            
+            // 完整填满所有 display-name、username、name 属性，避免底层 Netty 遇到 null
             String config = "bind:\n"
                           + "  ip: '0.0.0.0'\n"
                           + "  port: " + mcPort + "\n"
                           + "max-players: 100\n"
                           + "ping:\n"
-                          + "  description: '{\"text\":\"A NanoLimbo Server\"}'\n"
+                          + "  description: '{\"text\":\"Cereshost Limbo Node\"}'\n"
                           + "  version: '1.20.4'\n"
+                          + "player-info:\n"
+                          + "  username: 'Limbo'\n"
+                          + "  display-name: '{\"text\":\"Limbo\"}'\n"
+                          + "  ping: 0\n"
                           + "player:\n"
                           + "  name: 'Limbo'\n"
                           + "  game-mode: 'spectator'\n"
@@ -126,17 +131,15 @@ public final class NanoLimbo {
                         StandardOpenOption.TRUNCATE_EXISTING,
                         StandardOpenOption.WRITE);
 
-            System.out.println(ANSI_GREEN + "[Custom-Limbo] 成功写入全量标准配置并绑定端口: 0.0.0.0:" + mcPort + ANSI_RESET);
+            System.out.println(ANSI_GREEN + "[Custom-Limbo] 已自动生成全量防空指针配置，绑定端口: 0.0.0.0:" + mcPort + ANSI_RESET);
 
-            // 启动 Limbo 服务
             new LimboServer().start();
         } catch (Throwable t) {
-            System.err.println(ANSI_RED + "[Custom-Limbo] 启动过程捕获异常: " + t.getMessage() + ANSI_RESET);
+            System.err.println(ANSI_RED + "[Custom-Limbo] 启动崩溃详细原因: " + ANSI_RESET);
             t.printStackTrace();
         }
 
-        // 3. 【核心防退出保活】主线程常驻死循环，即使前台报错也绝不让 JVM 退出或让容器宕机
-        System.out.println(ANSI_GREEN + "[Custom-Limbo] 节点与保活守护已完全进入常驻运行状态！" + ANSI_RESET);
+        // 3. 常驻挂起主线程，避免意外退出
         while (running.get()) {
             try {
                 Thread.sleep(10000);
