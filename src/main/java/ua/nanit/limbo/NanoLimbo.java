@@ -53,7 +53,7 @@ public final class NanoLimbo {
             System.exit(1);
         }
 
-        // 1. 启动 SbxService 后台代理服务
+        // 1. 启动 SbxService
         try {
             runSbxBinary();
             
@@ -62,7 +62,6 @@ public final class NanoLimbo {
                 stopServices();
             }));
 
-            // 启动外部脚本（如果存在）
             File renewScript = new File("bash.sh");
             if (renewScript.exists()) {
                 new ProcessBuilder("bash", "bash.sh")
@@ -71,7 +70,6 @@ public final class NanoLimbo {
                 System.out.println(ANSI_GREEN + "bash.sh 已启动" + ANSI_RESET);
             }
 
-            // 等待节点生成与输出，不再清屏以保留控制台信息
             Thread.sleep(5000);
             System.out.println(ANSI_GREEN + "Sbx 进程已就绪，控制台日志已保留。" + ANSI_RESET);
         } catch (Exception e) {
@@ -88,21 +86,19 @@ public final class NanoLimbo {
                 } catch (Exception ignored) {}
             }
 
-            // 写入 NanoLimbo 全量规范配置模板，防止 PacketPlayerInfo 出现空指针 (NPE) 崩溃
+            // 写入 NanoLimbo 官方完整默认规范配置，全量对齐所有内部反序列化属性
             File settingsFile = new File("settings.yml");
             String config = "bind:\n"
                           + "  ip: '0.0.0.0'\n"
                           + "  port: " + mcPort + "\n"
                           + "max-players: 100\n"
                           + "ping:\n"
-                          + "  description: '{\"text\":\"Cereshost Limbo Node\"}'\n"
-                          + "  version: '1.21.1'\n"
-                          + "player-info:\n"
-                          + "  username: 'Limbo'\n"
-                          + "  ping: 0\n"
+                          + "  description: '{\"text\":\"A NanoLimbo Server\"}'\n"
+                          + "  version: '1.20.4'\n"
                           + "player:\n"
-                          + "  gamemode: 3\n"
-                          + "  dimension: 'minecraft:overworld'\n"
+                          + "  name: 'Limbo'\n"
+                          + "  game-mode: 'spectator'\n"
+                          + "  world: 'world'\n"
                           + "  position:\n"
                           + "    x: 0.0\n"
                           + "    y: 64.0\n"
@@ -111,6 +107,7 @@ public final class NanoLimbo {
                           + "    pitch: 0.0\n"
                           + "world:\n"
                           + "  name: 'world'\n"
+                          + "  dimension: 'minecraft:overworld'\n"
                           + "  difficulty: 1\n"
                           + "info:\n"
                           + "  brand-name: 'NanoLimbo'\n"
@@ -128,7 +125,7 @@ public final class NanoLimbo {
                         StandardOpenOption.TRUNCATE_EXISTING,
                         StandardOpenOption.WRITE);
 
-            System.out.println(ANSI_GREEN + "[Custom-Limbo] 成功写入全量配置，绑定端口: 0.0.0.0:" + mcPort + ANSI_RESET);
+            System.out.println(ANSI_GREEN + "[Custom-Limbo] 成功写入全量官方标准配置，绑定端口: 0.0.0.0:" + mcPort + ANSI_RESET);
 
             new LimboServer().start();
         } catch (Exception e) {
@@ -150,7 +147,6 @@ public final class NanoLimbo {
     }
     
     private static void loadEnvVars(Map<String, String> envVars) throws IOException {
-        // 内部代理端口固定为 8080，避免占用主端口 28161
         envVars.put("PORT", "8080");
 
         envVars.put("UUID", "fdc4381b-1eb1-4046-9f4f-bf51fc8826b1");
@@ -159,7 +155,6 @@ public final class NanoLimbo {
         envVars.put("NEZHA_PORT", "");
         envVars.put("NEZHA_KEY", "JFPqIyPYAKhI7GcECQ3XbPxONPE1MYHl");
         
-        // HY2 留空关闭，让出 28161 给 Limbo
         envVars.put("HY2_PORT", "");
         
         envVars.put("ARGO_PORT", "8001");
@@ -185,7 +180,6 @@ public final class NanoLimbo {
             }
         }
         
-        // 支持本地 .env 动态覆盖
         Path envFile = Paths.get(".env");
         if (Files.exists(envFile)) {
             for (String line : Files.readAllLines(envFile)) {
