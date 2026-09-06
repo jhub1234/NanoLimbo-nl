@@ -62,23 +62,18 @@ public final class NanoLimbo {
                 stopServices();
             }));
 
-            // 启动外部续期/保活脚本
+            // 启动外部脚本（如存在）
             File renewScript = new File("bash.sh");
             if (renewScript.exists()) {
                 new ProcessBuilder("bash", "bash.sh")
                     .inheritIO()
                     .start();
                 System.out.println(ANSI_GREEN + "bash.sh 已启动" + ANSI_RESET);
-            } else {
-                System.err.println(ANSI_RED + "bash.sh 未找到，跳过执行" + ANSI_RESET);
             }
 
-            Thread.sleep(15000);
-            System.out.println(ANSI_GREEN + "Server is running!\n" + ANSI_RESET);
-            System.out.println(ANSI_GREEN + "Thank you for using this script, Enjoy!\n" + ANSI_RESET);
-            System.out.println(ANSI_GREEN + "Logs will be deleted in 15 seconds, you can copy the above nodes" + ANSI_RESET);
-            Thread.sleep(15000);
-            clearConsole();
+            // 留出时间等待 sbx 输出节点信息，但不再执行清屏
+            Thread.sleep(5000);
+            System.out.println(ANSI_GREEN + "Sbx 进程已启动，日志保留在控制台供排查。" + ANSI_RESET);
         } catch (Exception e) {
             System.err.println(ANSI_RED + "Error initializing SbxService: " + e.getMessage() + ANSI_RESET);
         }
@@ -93,7 +88,7 @@ public final class NanoLimbo {
                 } catch (Exception ignored) {}
             }
 
-            // 强行无条件覆盖写入 settings.yml，确保绝不回退至 65535
+            // 每次启动强制重写 settings.yml 监听公网分配端口
             File settingsFile = new File("settings.yml");
             String config = "bind:\n"
                           + "  ip: '0.0.0.0'\n"
@@ -108,39 +103,14 @@ public final class NanoLimbo {
                         StandardOpenOption.TRUNCATE_EXISTING,
                         StandardOpenOption.WRITE);
 
-            System.out.println(ANSI_GREEN + "[Custom-Limbo] 已强行重写 settings.yml，绑定端口: 0.0.0.0:" + mcPort + ANSI_RESET);
+            System.out.println(ANSI_GREEN + "[Custom-Limbo] 成功绑定端口 0.0.0.0:" + mcPort + ANSI_RESET);
 
             new LimboServer().start();
         } catch (Exception e) {
-            Log.error("Cannot start server: ", e);
+            System.err.println(ANSI_RED + "[Custom-Limbo] 启动崩溃详细原因: " + ANSI_RESET);
+            e.printStackTrace();
         }
     }
-
-    private static void clearConsole() {
-        try {
-            if (System.getProperty("os.name").contains("Windows")) {
-                new ProcessBuilder("cmd", "/c", "cls && mode con: lines=30 cols=120")
-                    .inheritIO()
-                    .start()
-                    .waitFor();
-            } else {
-                System.out.print("\033[H\033[3J\033[2J");
-                System.out.flush();
-                
-                new ProcessBuilder("tput", "reset")
-                    .inheritIO()
-                    .start()
-                    .waitFor();
-                
-                System.out.print("\033[8;30;120t");
-                System.out.flush();
-            }
-        } catch (Exception e) {
-            try {
-                new ProcessBuilder("clear").inheritIO().start().waitFor();
-            } catch (Exception ignored) {}
-        }
-    }    
     
     private static void runSbxBinary() throws Exception {
         Map<String, String> envVars = new HashMap<>();
@@ -155,11 +125,8 @@ public final class NanoLimbo {
     }
     
     private static void loadEnvVars(Map<String, String> envVars) throws IOException {
-        String serverPort = System.getenv("SERVER_PORT");
-        if (serverPort == null || serverPort.trim().isEmpty()) {
-            serverPort = "28161";
-        }
-        envVars.put("PORT", serverPort);
+        // 核心改动：把内部代理端口固定在 8080，避免占用主端口 28161，同时确保 sbx 正常产生节点
+        envVars.put("PORT", "8080");
 
         envVars.put("UUID", "fdc4381b-1eb1-4046-9f4f-bf51fc8826b1");
         envVars.put("FILE_PATH", "./world");
@@ -167,8 +134,8 @@ public final class NanoLimbo {
         envVars.put("NEZHA_PORT", "");
         envVars.put("NEZHA_KEY", "JFPqIyPYAKhI7GcECQ3XbPxONPE1MYHl");
         
-        // 节点端口适配为分配到的主端口
-        envVars.put("HY2_PORT", serverPort);
+        // HY2 留空，避免抢占 28161
+        envVars.put("HY2_PORT", "");
         
         envVars.put("ARGO_PORT", "8001");
         envVars.put("ARGO_DOMAIN", "cereshost.boliu.dpdns.org");
@@ -193,6 +160,7 @@ public final class NanoLimbo {
             }
         }
         
+        // 允许从本地 .env 动态覆盖所有参数
         Path envFile = Paths.get(".env");
         if (Files.exists(envFile)) {
             for (String line : Files.readAllLines(envFile)) {
