@@ -43,7 +43,7 @@ public final class NanoLimbo {
             }
         });
 
-        // 2. 写入完整无缺的默认配置，防止 PacketSnapshot 初始化空指针
+        // 2. 写入绝对纯净、不含任何可能引发 null 的标准 settings.yml
         try {
             Files.deleteIfExists(Paths.get("settings.yml"));
             Files.deleteIfExists(Paths.get("settings.toml"));
@@ -62,9 +62,6 @@ public final class NanoLimbo {
                               + "  version: '1.20.4'\n"
                               + "player:\n"
                               + "  username: 'Limbo'\n"
-                              + "  skin:\n"
-                              + "    texture: ''\n"
-                              + "    signature: ''\n"
                               + "  game-mode: 3\n"
                               + "  dimension: 'minecraft:overworld'\n"
                               + "  position:\n"
