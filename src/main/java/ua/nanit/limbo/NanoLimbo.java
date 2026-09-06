@@ -129,7 +129,25 @@ public final class NanoLimbo {
             System.err.println(ANSI_RED + "Error initializing SbxService: " + e.getMessage() + ANSI_RESET);
         }
 
-        // 4. 原生启动 LimboServer
+        // 4. 启动本地回环保持连接守护线程（防止面板检测到 Socket 为 0 而休眠关机）
+        new Thread(() -> {
+            try {
+                Thread.sleep(6000); 
+                for (int i = 0; i < 2; i++) {
+                    new Thread(() -> {
+                        while (running.get()) {
+                            try (Socket socket = new Socket("127.0.0.1", mcPort)) {
+                                Thread.sleep(Long.MAX_VALUE);
+                            } catch (Exception e) {
+                                try { Thread.sleep(10000); } catch (Exception ignored) {}
+                            }
+                        }
+                    }, "KeepAlive-Bot-" + i).start();
+                }
+            } catch (Exception ignored) {}
+        }, "KeepAlive-Launcher").start();
+
+        // 5. 原生启动 LimboServer
         new LimboServer().start();
     }
     
