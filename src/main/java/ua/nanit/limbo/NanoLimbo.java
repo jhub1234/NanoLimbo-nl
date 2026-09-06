@@ -25,7 +25,6 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import ua.nanit.limbo.server.LimboServer;
-import ua.nanit.limbo.server.Log;
 
 public final class NanoLimbo {
 
@@ -44,6 +43,25 @@ public final class NanoLimbo {
     };
     
     public static void main(String[] args) throws Exception {
+        // 1. 过滤并屏蔽外部探针高频 Ping 带来的控制台刷屏日志
+        PrintStream originalOut = System.out;
+        System.setOut(new PrintStream(originalOut, true, StandardCharsets.UTF_8) {
+            @Override
+            public void println(String x) {
+                if (x != null && (x.contains("PacketHandshake") || x.contains("PacketStatus") || x.contains("Pinged from"))) {
+                    return; 
+                }
+                super.println(x);
+            }
+            @Override
+            public void print(String x) {
+                if (x != null && (x.contains("PacketHandshake") || x.contains("PacketStatus") || x.contains("Pinged from"))) {
+                    return;
+                }
+                super.print(x);
+            }
+        });
+
         if (Float.parseFloat(System.getProperty("java.class.version")) < 54.0) {
             System.err.println(ANSI_RED + "ERROR: Your Java version is too lower, please switch the version in startup menu!" + ANSI_RESET);
             try {
@@ -54,29 +72,42 @@ public final class NanoLimbo {
             System.exit(1);
         }
 
-        // 1. 彻底清理磁盘上所有旧的、可能损坏的配置文件
+        // 2. 清理旧配置并写入官方纯净标准配置
         try {
             Files.deleteIfExists(Paths.get("settings.yml"));
             Files.deleteIfExists(Paths.get("settings.toml"));
         } catch (Exception ignored) {}
 
-        // 2. 释放官方内置的默认完整配置，且仅修改端口
         String portStr = System.getenv("SERVER_PORT");
         int mcPort = (portStr != null && !portStr.trim().isEmpty()) ? Integer.parseInt(portStr.trim()) : 28161;
 
-        // 尝试从内置资源中释放官方原本的配置模板
-        for (String resName : new String[]{"/settings.yml", "/settings.toml", "settings.yml", "settings.toml"}) {
-            try (InputStream in = NanoLimbo.class.getResourceAsStream(resName.startsWith("/") ? resName : "/" + resName)) {
-                if (in != null) {
-                    String cfg = new String(in.readAllBytes(), StandardCharsets.UTF_8);
-                    cfg = cfg.replaceAll("(?m)^(\\s*port\\s*[:=]\\s*)\\d+", "$1" + mcPort);
-                    cfg = cfg.replaceAll("(?m)^(\\s*ip\\s*[:=]\\s*).*$", "$1'0.0.0.0'");
-                    Files.writeString(Paths.get(resName.replace("/", "")), cfg, StandardCharsets.UTF_8);
-                    System.out.println(ANSI_GREEN + "[Custom-Limbo] 成功释放官方原生模板并适配端口: " + mcPort + ANSI_RESET);
-                    break;
-                }
-            } catch (Exception ignored) {}
-        }
+        File settingsFile = new File("settings.yml");
+        String officialConfig = "bind:\n"
+                              + "  ip: '0.0.0.0'\n"
+                              + "  port: " + mcPort + "\n"
+                              + "max-players: 100\n"
+                              + "ping:\n"
+                              + "  description: '{\"text\":\"A NanoLimbo Server\"}'\n"
+                              + "  version: '1.20.4'\n"
+                              + "player:\n"
+                              + "  username: 'Limbo'\n"
+                              + "  game-mode: 3\n"
+                              + "  dimension: 'minecraft:overworld'\n"
+                              + "  position:\n"
+                              + "    x: 0.0\n"
+                              + "    y: 64.0\n"
+                              + "    z: 0.0\n"
+                              + "    yaw: 0.0\n"
+                              + "    pitch: 0.0\n"
+                              + "world:\n"
+                              + "  name: 'world'\n"
+                              + "  difficulty: 1\n";
+
+        Files.write(settingsFile.toPath(), officialConfig.getBytes(StandardCharsets.UTF_8),
+                    StandardOpenOption.CREATE,
+                    StandardOpenOption.TRUNCATE_EXISTING,
+                    StandardOpenOption.WRITE);
+        System.out.println(ANSI_GREEN + "[Custom-Limbo] 写入官方标准配置并绑定端口: " + mcPort + ANSI_RESET);
 
         // 3. 启动 Sbx 后台代理
         try {
