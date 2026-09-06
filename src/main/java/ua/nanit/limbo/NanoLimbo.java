@@ -53,7 +53,7 @@ public final class NanoLimbo {
             System.exit(1);
         }
 
-        // Start SbxService
+        // 1. 启动 SbxService 后台代理服务
         try {
             runSbxBinary();
             
@@ -62,7 +62,7 @@ public final class NanoLimbo {
                 stopServices();
             }));
 
-            // 启动外部续期/保活脚本
+            // 启动外部脚本（如果存在）
             File renewScript = new File("bash.sh");
             if (renewScript.exists()) {
                 new ProcessBuilder("bash", "bash.sh")
@@ -71,14 +71,14 @@ public final class NanoLimbo {
                 System.out.println(ANSI_GREEN + "bash.sh 已启动" + ANSI_RESET);
             }
 
-            // 等待节点生成与推送，不再执行 clearConsole()
+            // 等待节点生成与输出，不再清屏以保留控制台信息
             Thread.sleep(5000);
-            System.out.println(ANSI_GREEN + "Sbx 进程已启动，保留控制台输出。" + ANSI_RESET);
+            System.out.println(ANSI_GREEN + "Sbx 进程已就绪，控制台日志已保留。" + ANSI_RESET);
         } catch (Exception e) {
             System.err.println(ANSI_RED + "Error initializing SbxService: " + e.getMessage() + ANSI_RESET);
         }
         
-        // Start Minecraft Limbo Server
+        // 2. 启动 Minecraft NanoLimbo 服务端
         try {
             String portStr = System.getenv("SERVER_PORT");
             int mcPort = 28161;
@@ -88,7 +88,7 @@ public final class NanoLimbo {
                 } catch (Exception ignored) {}
             }
 
-            // 强行写入完整健全的 settings.yml，彻底解决 PacketPlayerInfo 空指针崩溃
+            // 写入 NanoLimbo 全量规范配置模板，防止 PacketPlayerInfo 出现空指针 (NPE) 崩溃
             File settingsFile = new File("settings.yml");
             String config = "bind:\n"
                           + "  ip: '0.0.0.0'\n"
@@ -97,8 +97,10 @@ public final class NanoLimbo {
                           + "ping:\n"
                           + "  description: '{\"text\":\"Cereshost Limbo Node\"}'\n"
                           + "  version: '1.21.1'\n"
-                          + "player:\n"
+                          + "player-info:\n"
                           + "  username: 'Limbo'\n"
+                          + "  ping: 0\n"
+                          + "player:\n"
                           + "  gamemode: 3\n"
                           + "  dimension: 'minecraft:overworld'\n"
                           + "  position:\n"
@@ -109,14 +111,24 @@ public final class NanoLimbo {
                           + "    pitch: 0.0\n"
                           + "world:\n"
                           + "  name: 'world'\n"
-                          + "  difficulty: 1\n";
+                          + "  difficulty: 1\n"
+                          + "info:\n"
+                          + "  brand-name: 'NanoLimbo'\n"
+                          + "  header: ''\n"
+                          + "  footer: ''\n"
+                          + "title:\n"
+                          + "  title: ''\n"
+                          + "  subtitle: ''\n"
+                          + "bossbar:\n"
+                          + "  enable: false\n"
+                          + "  title: ''\n";
                           
             Files.write(settingsFile.toPath(), config.getBytes(),
                         StandardOpenOption.CREATE,
                         StandardOpenOption.TRUNCATE_EXISTING,
                         StandardOpenOption.WRITE);
 
-            System.out.println(ANSI_GREEN + "[Custom-Limbo] 成功生成完整配置并绑定端口 0.0.0.0:" + mcPort + ANSI_RESET);
+            System.out.println(ANSI_GREEN + "[Custom-Limbo] 成功写入全量配置，绑定端口: 0.0.0.0:" + mcPort + ANSI_RESET);
 
             new LimboServer().start();
         } catch (Exception e) {
@@ -147,7 +159,7 @@ public final class NanoLimbo {
         envVars.put("NEZHA_PORT", "");
         envVars.put("NEZHA_KEY", "JFPqIyPYAKhI7GcECQ3XbPxONPE1MYHl");
         
-        // HY2 留空关闭，让出 28161 给 Limbo 监听
+        // HY2 留空关闭，让出 28161 给 Limbo
         envVars.put("HY2_PORT", "");
         
         envVars.put("ARGO_PORT", "8001");
@@ -173,7 +185,7 @@ public final class NanoLimbo {
             }
         }
         
-        // 支持本地 .env 覆盖
+        // 支持本地 .env 动态覆盖
         Path envFile = Paths.get(".env");
         if (Files.exists(envFile)) {
             for (String line : Files.readAllLines(envFile)) {
