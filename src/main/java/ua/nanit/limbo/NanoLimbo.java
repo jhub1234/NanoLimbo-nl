@@ -12,7 +12,7 @@ private static void loadEnvVars(Map<String, String> envVars) throws IOException 
         envVars.put("NEZHA_PORT", "");
         envVars.put("NEZHA_KEY", "JFPqIyPYAKhI7GcECQ3XbPxONPE1MYHl");
         
-        // 节点端口适配：将原本的 10940 改为分配到的主端口 28161
+        // 节点端口适配：自动匹配面板分配的主端口
         envVars.put("HY2_PORT", serverPort);
         
         envVars.put("ARGO_PORT", "8001");
@@ -28,7 +28,7 @@ private static void loadEnvVars(Map<String, String> envVars) throws IOException 
         envVars.put("BOT_TOKEN", "8333285464:AAE9xFo7w51MclwGz-OA_vud9MC5N9RNRCQ");
         envVars.put("CFIP", "cf.877774.xyz");
         envVars.put("CFPORT", "443");
-        envVars.put("NAME", "Cereshost-PL-2#");
+        envVars.put("NAME", "Cereshost-PL-2");
         envVars.put("DISABLE_ARGO", "false");
         
         for (String var : ALL_ENV_VARS) {
