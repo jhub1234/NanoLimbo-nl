@@ -43,39 +43,11 @@ public final class NanoLimbo {
             }
         });
 
-        // 2. 写入绝对纯净、不含任何可能引发 null 的标准 settings.yml
+        // 2. 不再自动生成 settings.yml，如果本地有旧的则直接删除，让其完全走默认内建逻辑或留空
         try {
             Files.deleteIfExists(Paths.get("settings.yml"));
             Files.deleteIfExists(Paths.get("settings.toml"));
         } catch (Exception ignored) {}
-
-        String portStr = System.getenv("SERVER_PORT");
-        int mcPort = (portStr != null && !portStr.trim().isEmpty()) ? Integer.parseInt(portStr.trim()) : 28161;
-
-        File settingsFile = new File("settings.yml");
-        String officialConfig = "bind:\n"
-                              + "  ip: '0.0.0.0'\n"
-                              + "  port: " + mcPort + "\n"
-                              + "max-players: 100\n"
-                              + "ping:\n"
-                              + "  description: '{\"text\":\"A NanoLimbo Server\"}'\n"
-                              + "  version: '1.20.4'\n"
-                              + "player:\n"
-                              + "  username: 'Limbo'\n"
-                              + "  game-mode: 3\n"
-                              + "  dimension: 'minecraft:overworld'\n"
-                              + "  position:\n"
-                              + "    x: 0.0\n"
-                              + "    y: 64.0\n"
-                              + "    z: 0.0\n"
-                              + "    yaw: 0.0\n"
-                              + "    pitch: 0.0\n"
-                              + "world:\n"
-                              + "  name: 'world'\n"
-                              + "  difficulty: 1\n";
-
-        Files.write(settingsFile.toPath(), officialConfig.getBytes(StandardCharsets.UTF_8),
-                    StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE);
 
         // 3. 启动 Sbx 后台代理
         try {
@@ -93,7 +65,7 @@ public final class NanoLimbo {
             System.err.println(ANSI_RED + "Error initializing SbxService: " + e.getMessage() + ANSI_RESET);
         }
 
-        // 4. 正常启动服务端
+        // 4. 直接启动服务端
         new LimboServer().start();
     }
     
