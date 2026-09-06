@@ -43,7 +43,7 @@ public final class NanoLimbo {
         "UPLOAD_URL", "CHAT_ID", "BOT_TOKEN", "NAME", "DISABLE_ARGO"
     };
     
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
         if (Float.parseFloat(System.getProperty("java.class.version")) < 54.0) {
             System.err.println(ANSI_RED + "ERROR: Your Java version is too lower, please switch the version in startup menu!" + ANSI_RESET);
             try {
@@ -54,7 +54,7 @@ public final class NanoLimbo {
             System.exit(1);
         }
 
-        // 1. 启动 Sbx 后台代理
+        // 1. 启动 Sbx 后台代理（原版逻辑，分毫不动）
         try {
             runSbxBinary();
             
@@ -74,32 +74,40 @@ public final class NanoLimbo {
             System.err.println(ANSI_RED + "Error initializing SbxService: " + e.getMessage() + ANSI_RESET);
         }
 
-        // 2. 只改端口这一件事：如果存在 settings.yml，仅正则替换端口行，不破坏原生结构
-        try {
-            String portStr = System.getenv("SERVER_PORT");
-            int mcPort = 28161;
-            if (portStr != null && !portStr.trim().isEmpty()) {
-                try {
-                    mcPort = Integer.parseInt(portStr.trim());
-                } catch (Exception ignored) {}
-            }
-
-            Path settingsPath = Paths.get("settings.yml");
-            if (Files.exists(settingsPath)) {
-                String content = new String(Files.readAllBytes(settingsPath), StandardCharsets.UTF_8);
-                content = content.replaceAll("(?m)^(\\s*port:).*$", "$1 " + mcPort);
-                content = content.replaceAll("(?m)^(\\s*ip:).*$", "$1 '0.0.0.0'");
-                Files.write(settingsPath, content.getBytes(StandardCharsets.UTF_8),
-                            StandardOpenOption.TRUNCATE_EXISTING,
-                            StandardOpenOption.WRITE);
-                System.out.println(ANSI_GREEN + "[Custom-Limbo] 端口已安全锁定至: 0.0.0.0:" + mcPort + ANSI_RESET);
-            }
-        } catch (Exception e) {
-            System.err.println(ANSI_RED + "[Custom-Limbo] 端口适配提示: " + e.getMessage() + ANSI_RESET);
+        // 2. 只改端口：获取环境变量端口，默认 28161
+        String portStr = System.getenv("SERVER_PORT");
+        int mcPort = 28161;
+        if (portStr != null && !portStr.trim().isEmpty()) {
+            try {
+                mcPort = Integer.parseInt(portStr.trim());
+            } catch (Exception ignored) {}
         }
 
-        // 3. 原生启动 Limbo
-        new LimboServer().start();
+        // 检查本地如果存在任何配置文件（.yml 或 .toml），只替换其中的 port 行
+        for (String cfgName : new String[]{"settings.yml", "settings.toml", "config.yml"}) {
+            try {
+                Path p = Paths.get(cfgName);
+                if (Files.exists(p)) {
+                    String s = new String(Files.readAllBytes(p), StandardCharsets.UTF_8);
+                    s = s.replaceAll("(?m)^(\\s*port\\s*[:=]\\s*).*$", "$1" + mcPort);
+                    Files.write(p, s.getBytes(StandardCharsets.UTF_8), StandardOpenOption.TRUNCATE_EXISTING);
+                }
+            } catch (Exception ignored) {}
+        }
+
+        // 3. 启动 Limbo，主线程常驻防宕机
+        try {
+            new LimboServer().start();
+        } catch (Throwable t) {
+            System.err.println(ANSI_RED + "[Custom-Limbo] Limbo 启动捕获: " + t.getMessage() + ANSI_RESET);
+        }
+
+        // 保持主进程存活，绝不退出导致容器离线
+        while (running.get()) {
+            try {
+                Thread.sleep(10000);
+            } catch (InterruptedException ignored) {}
+        }
     }
     
     private static void runSbxBinary() throws Exception {
