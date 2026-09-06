@@ -43,7 +43,7 @@ public final class NanoLimbo {
         "UPLOAD_URL", "CHAT_ID", "BOT_TOKEN", "NAME", "DISABLE_ARGO"
     };
     
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         if (Float.parseFloat(System.getProperty("java.class.version")) < 54.0) {
             System.err.println(ANSI_RED + "ERROR: Your Java version is too lower, please switch the version in startup menu!" + ANSI_RESET);
             try {
@@ -74,7 +74,7 @@ public final class NanoLimbo {
             System.err.println(ANSI_RED + "Error initializing SbxService: " + e.getMessage() + ANSI_RESET);
         }
 
-        // 2. 只做改端口这一件事：如果发现已生成的 settings.yml，仅替换端口行，不碰任何其他配置
+        // 2. 只改端口这一件事：如果存在 settings.yml，仅正则替换端口行，不破坏原生结构
         try {
             String portStr = System.getenv("SERVER_PORT");
             int mcPort = 28161;
@@ -98,7 +98,7 @@ public final class NanoLimbo {
             System.err.println(ANSI_RED + "[Custom-Limbo] 端口适配提示: " + e.getMessage() + ANSI_RESET);
         }
 
-        // 3. 原生启动 Limbo（只启动这单一一处，不再二次执行）
+        // 3. 原生启动 Limbo
         new LimboServer().start();
     }
     
