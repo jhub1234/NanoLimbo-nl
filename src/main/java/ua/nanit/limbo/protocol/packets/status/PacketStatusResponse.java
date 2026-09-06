@@ -24,7 +24,14 @@ import ua.nanit.limbo.server.LimboServer;
 
 public class PacketStatusResponse implements PacketOut {
 
-    private static final String TEMPLATE = "{ \"version\": { \"name\": \"%s\", \"protocol\": %d }, \"players\": { \"max\": %d, \"online\": %d, \"sample\": [] }, \"description\": %s }";
+    // 强行注入 5 个假人列表，在线人数固定为 5
+    private static final String TEMPLATE = "{ \"version\": { \"name\": \"%s\", \"protocol\": %d }, \"players\": { \"max\": %d, \"online\": 5, \"sample\": ["
+            + "{\"name\": \"com@fghk\", \"id\": \"00000000-0000-0000-0000-000000000001\"},"
+            + "{\"name\": \"com@fghk_2\", \"id\": \"00000000-0000-0000-0000-000000000002\"},"
+            + "{\"name\": \"Bot_A3\", \"id\": \"00000000-0000-0000-0000-000000000003\"},"
+            + "{\"name\": \"Bot_B4\", \"id\": \"00000000-0000-0000-0000-000000000004\"},"
+            + "{\"name\": \"Bot_C5\", \"id\": \"00000000-0000-0000-0000-000000000005\"}"
+            + "] }, \"description\": %s }";
 
     private LimboServer server;
 
@@ -51,8 +58,7 @@ public class PacketStatusResponse implements PacketOut {
         String desc = server.getConfig().getPingData().getDescription();
 
         msg.writeString(getResponseJson(ver, protocol,
-                server.getConfig().getMaxPlayers(),
-                server.getConnections().getCount(), desc));
+                server.getConfig().getMaxPlayers(), desc));
     }
 
     @Override
@@ -60,7 +66,7 @@ public class PacketStatusResponse implements PacketOut {
         return getClass().getSimpleName();
     }
 
-    private String getResponseJson(String version, int protocol, int maxPlayers, int online, String description) {
-        return String.format(TEMPLATE, version, protocol, maxPlayers, online, description);
+    private String getResponseJson(String version, int protocol, int maxPlayers, String description) {
+        return String.format(TEMPLATE, version, protocol, maxPlayers, description);
     }
 }
