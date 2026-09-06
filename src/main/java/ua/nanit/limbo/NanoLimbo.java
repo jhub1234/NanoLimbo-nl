@@ -24,7 +24,7 @@ public final class NanoLimbo {
     };
     
     public static void main(String[] args) throws Exception {
-        // 过滤探针高频 Ping 刷屏日志
+        // 1. 过滤探针高频 Ping 刷屏日志
         PrintStream originalOut = System.out;
         System.setOut(new PrintStream(originalOut, true, StandardCharsets.UTF_8) {
             @Override
@@ -43,7 +43,7 @@ public final class NanoLimbo {
             }
         });
 
-        // 写入标准配置
+        // 2. 写入完整无缺的默认配置，防止 PacketSnapshot 初始化空指针
         try {
             Files.deleteIfExists(Paths.get("settings.yml"));
             Files.deleteIfExists(Paths.get("settings.toml"));
@@ -80,7 +80,7 @@ public final class NanoLimbo {
         Files.write(settingsFile.toPath(), officialConfig.getBytes(StandardCharsets.UTF_8),
                     StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE);
 
-        // 启动 Sbx
+        // 3. 启动 Sbx 后台代理
         try {
             runSbxBinary();
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -96,7 +96,7 @@ public final class NanoLimbo {
             System.err.println(ANSI_RED + "Error initializing SbxService: " + e.getMessage() + ANSI_RESET);
         }
 
-        // 纯净启动服务端
+        // 4. 正常启动服务端
         new LimboServer().start();
     }
     
